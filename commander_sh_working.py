@@ -256,7 +256,7 @@ def upload_mission(drone):
                 int(param[12])      # mission_type
             )
             sleep(0.1)
-    print(str(this_drone.target_system) + '` upload done'
+        print(str(this_drone.target_system) + '` upload done'
 
 
 # read a message
