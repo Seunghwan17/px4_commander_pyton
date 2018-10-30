@@ -3,7 +3,9 @@ from time import *
 from pymavlink import mavutil
 import threading
 from datetime import datetime
+import math
 
+mission_cnt = 0
 
 class CommandThread(threading.Thread):
     def __init__(self, drone, command):
@@ -84,7 +86,7 @@ def arming(drone):
     this_sequence = drone[1]
     sleep_time = float(this_sequence) * 5
     sleep(sleep_time)
-    for i in range(1, 5):
+    for iter_range in range(1, 5):
         this_drone.mav.command_long_send(
             this_drone.target_system,  # target_system
             this_drone.target_component,
@@ -157,7 +159,7 @@ def land(drone):
 
 def start(drone):
     this_drone = drone[0]
-    for i in range(1, 5):
+    for iter_range in range(1, 5):
         '''
         #old command
         this_drone.mav.set_mode_send(
@@ -171,7 +173,7 @@ def start(drone):
 def next_mission(drone):
     this_drone = drone[0]
     next_seq = this_drone.waypoint_current()+1
-    for i in range(1, 5):
+    for iter_range in range(1, 5):
         this_drone.mav.mission_set_current_send(
             this_drone.target_system,  # target_system
             this_drone.target_component,
@@ -180,7 +182,7 @@ def next_mission(drone):
 
 def continue_mission(drone):
     this_drone = drone[0]
-    for i in range(1, 5):
+    for iter_range in range(1, 5):
         this_drone.mav.set_mode_send(
                     this_drone.target_system,
                     29,
@@ -190,7 +192,7 @@ def continue_mission(drone):
 
 def pause_mission(drone):
     this_drone = drone[0]
-    for i in range(1, 5):
+    for iter_range in range(1, 5):
         this_drone.mav.set_mode_send(
                     this_drone.target_system,
                     29,
@@ -223,6 +225,7 @@ def upload_mission(drone):
         0
     )
     file_name = "mission" + str(this_drone.target_system) + ".plan"
+    print(file_name)
     with open(file_name, "r") as file:
         file_lines = file.read().split('\n')
     # read_sequence
@@ -232,23 +235,27 @@ def upload_mission(drone):
     for now_seq in range(total_seq):
         line = file_lines[now_seq+2]
         param = line.split()
-        this_drone.mav.mission_item_send(
-            this_drone.target_system,
-            0,
-            int(param[0]),      # seq
-            int(param[1]),      # frame
-            int(param[2]),      # mav_cmd
-            int(param[3]),      # current
-            int(param[4]),      # autocontinue
-            float(param[5]),    # param1 Minimum pitch (if airspeed sensor present), desired pitch without sensor
-            float(param[6]),    # param2 (all other params meaningless)
-            float(param[7]),    # param3
-            float(param[8]),    # param4
-            float(param[9]),    # param5 latitude
-            float(param[10]),   # param6 longitude
-            float(param[11]),   # param7 altitude
-            int(param[12])      # mission_type
-        )
+        while(mission_cnt is int(param[0])):
+            print(mission_cnt)
+            print(int(param[0]))
+            this_drone.mav.mission_item_send(
+                this_drone.target_system,
+                0,
+                int(param[0]),      # seq
+                int(param[1]),      # frame
+                int(param[2]),      # mav_cmd
+                int(param[3]),      # current
+                int(param[4]),      # autocontinue
+                float(param[5]),    # param1 Minimum pitch (if airspeed sensor present), desired pitch without sensor
+                float(param[6]),    # param2 (all other params meaningless)
+                float(param[7]),    # param3
+                float(param[8]),    # param4
+                float(param[9]),    # param5 latitude
+                float(param[10]),   # param6 longitude
+                float(param[11]),   # param7 altitude
+                int(param[12])      # mission_type
+            )
+            sleep(0.1)
     print(str(this_drone.target_system) + '` upload done'
 
 
@@ -258,17 +265,20 @@ def read_message(drone):
     while True:
         msg = drone.recv_match(
             type=['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_REQUEST_INT', 'MISSION_REQUEST',
-                  'MISSION_ACK', 'GLOBAL_POSITION_INT'], blocking=True, timeout=0.001)
+                  'MISSION_ACK', 'GLOBAL_POSITION_INT'], blocking=True, timeout=0.5)
         try:
             if msg.name is 'MISSION_ACK' and msg.type is 0:
                 print(str(drone.target_system) + "' upload done")
+                global mission_cnt
+                mission_cnt = 0
+            elif msg.name is 'MISSION_REQUEST':
+                #print(msg)
+                mission_cnt = msg.seq
             # GPS_LOG
-
-#            if msg.name is 'GLOBAL_POSITION_INT':            
-#                with open(file_name, "a") as log_file:
-#                    log_data = str(msg.lat) + ' ' + str(msg.lon) + ' ' + str(msg.relative_alt) + '\n'
-#                    log_file.write(log_data)
-
+            #if msg.name is 'GLOBAL_POSITION_INT':            
+                #with open(file_name, "a") as log_file:
+                    #log_data = str(msg.lat) + ' ' + str(msg.lon) + ' ' + str(msg.relative_alt) + '\n'
+                    #log_file.write(log_data)
         except:
             pass
 
@@ -278,7 +288,7 @@ def read_data():
     file_name = "port.txt"
     with open(file_name, "r") as file:
         input_data = file.read().split('\n')
-    input_data.pop()  #remove last data
+    #input_data.pop()  #remove last data
     return input_data
 
 
@@ -302,6 +312,7 @@ def make_connection(input_data):
             threading.Thread(target=read_message, args=(drone,)).start()
     if len(failed_data) is not 0:
         check_retry = raw_input("retry the failure things? (y/n) ")
+        print(check_retry)
         if check_retry is "y":
             make_connection(failed_data)
         elif check_retry is "n":
@@ -309,6 +320,7 @@ def make_connection(input_data):
 
 
 if __name__ == "__main__":
+    global mission_cnt
     var_drones_set = list()
     input_data = read_data()
     make_connection(input_data)
