@@ -4,8 +4,11 @@ from pymavlink import mavutil
 import threading
 from datetime import datetime
 import math
+import serial
+
 
 mission_cnt = 0
+
 
 class CommandThread(threading.Thread):
     def __init__(self, drone, command):
@@ -14,33 +17,33 @@ class CommandThread(threading.Thread):
         self.command = command
 
     def run(self):
-        if self.command == "arming":
+        if self.command == 'arming':
             arming(self.drone)
-        elif self.command == "disarming":
+        elif self.command == 'disarming':
             disarming(self.drone)
-        elif self.command == "takeoff":
+        elif self.command == 'takeoff':
             takeoff(self.drone)
-        elif self.command == "land":
+        elif self.command == 'land':
             land(self.drone)
-        elif self.command == "start":
+        elif self.command == 'start':
             start(self.drone)
-        elif self.command == "next":
+        elif self.command == 'next':
             next_mission(self.drone)
-        elif self.command == "continue":
+        elif self.command == 'continue':
             continue_mission(self.drone)
-        elif self.command == "pause":
+        elif self.command == 'pause':
             pause_mission(self.drone)
-        elif self.command == "upload":
+        elif self.command == 'upload':
             upload_mission(self.drone)
-        elif self.command == "kill":
+        elif self.command == 'kill':
             kill(self.drone)
         else:
-            print("arming/ disarming/ takeoff/ land/ start/ next/ continue/ pause/ upload/ kill")
+            print('arming/ disarming/ takeoff/ land/ start/ next/ continue/ pause/ upload/ kill')
 
 
 def commander(drones_set):
     while True:
-        command = raw_input("commander? (upload, start, pause, continue, next, land, kill): ")
+        command = raw_input('commander? (upload, start, pause, continue, next, land, kill): ')
         command_to_drone(command, drones_set)
 
 
@@ -52,7 +55,7 @@ def command_to_drone(command, drones_set):
         print(target_command)
         print(drone_id_command)
     except:
-        print("You must need to input two argument!! command / drone_id(all or sys_id)")
+        print('You must need to input two argument!! command / drone_id(all or sys_id)')
         return
     if target_command == 'upload':
         for drone in drones_set:
@@ -68,11 +71,11 @@ def command_to_drone(command, drones_set):
             command_thread.start()
         for command_thread in command_thread_list:
             command_thread.join()
-        print("Start " + target_command)
+        print('Start ' + target_command)
     else:
         for drone in drones_set:
             if drone_id_command == str(drone[0].target_system):
-                print("target : " + str(drone[0].target_system))
+                print('target : ' + str(drone[0].target_system))
                 command_thread = CommandThread(drone, target_command)
                 command_thread.start()
                 sleep(0.001)
@@ -214,7 +217,7 @@ def kill(drone):
         0,                                             # param5
         0,                                             # param6
         0)                                             # param7
-    print("***************** warning " + str(this_drone.target_system) + " is killed, be careful. ********************")
+    print('***************** warning ' + str(this_drone.target_system) + ' is killed, be careful. ********************')
 
 
 def upload_mission(drone):
@@ -224,14 +227,14 @@ def upload_mission(drone):
         this_drone.target_component,
         0
     )
-    file_name = "mission" + str(this_drone.target_system) + ".plan"
+    file_name = 'mission' + str(this_drone.target_system) + '.plan'
     print(file_name)
-    with open(file_name, "r") as file:
+    with open(file_name, 'r') as file:
         file_lines = file.read().split('\n')
     # read_sequence
     total_seq = int(file_lines[0])
     this_drone.waypoint_count_send(total_seq)
-    print(str(this_drone.target_system) + '` upload start'
+    print(str(this_drone.target_system) + '` upload start')
     for now_seq in range(total_seq):
         line = file_lines[now_seq+2]
         param = line.split()
@@ -256,7 +259,42 @@ def upload_mission(drone):
                 int(param[12])      # mission_type
             )
             sleep(0.1)
-        print(str(this_drone.target_system) + '` upload done'
+    print(str(this_drone.target_system) + ' upload done')
+
+
+def upload_rtcm(drone, rtcm_data):
+    this_drone = drone[0]
+    full_rtcm_msg = rtcm_data[0]
+    msg_max_length = 180
+    if(len(full_rtcm_msg) < msg_max_length):
+        rtcm_msg_flag = (this_drone.MAV.seq & 0x1F) << 3 
+        rtcm_msg_len = len(full_rtcm_msg)
+        this_drone.mav.gps_rtcm_data_send(
+            rtcm_msg_flag,  #flags
+            rtcm_msg_len,   #len
+            rtcm_data[0]    #data_t[180]
+        )
+    else:
+        fragment_id = 0
+        start = 0
+        length = 0 
+        while(start < len(full_rtcm_msg)):
+            length = min(len(full_rtcm_msg) - start, msg_max_length)
+            rtcm_msg_flag = 1
+            rtcm_msg_flag += 1
+            rtcm_msg_flag |= (rtcm_msg_flag << 1)
+            rtcm_msg_flag |= ((this_drone.MAV.seq & 0x1F) << 3)
+            rtcm_msg_len = length
+            this_drone.mav.gps_rtcm_data_send(
+            rtcm_msg_flag,  #flags
+            rtcm_msg_len,   #len
+            rtcm_data[0]    #data_t[180]
+            )
+            start += length
+        
+
+
+
 
 
 # read a message
@@ -268,7 +306,7 @@ def read_message(drone):
                   'MISSION_ACK', 'GLOBAL_POSITION_INT'], blocking=True, timeout=0.5)
         try:
             if msg.name is 'MISSION_ACK' and msg.type is 0:
-                print(str(drone.target_system) + "' upload done")
+                print(str(drone.target_system) + '` upload done')
                 global mission_cnt
                 mission_cnt = 0
             elif msg.name is 'MISSION_REQUEST':
@@ -276,17 +314,53 @@ def read_message(drone):
                 mission_cnt = msg.seq
             # GPS_LOG
             #if msg.name is 'GLOBAL_POSITION_INT':            
-                #with open(file_name, "a") as log_file:
+                #with open(file_name, 'a') as log_file:
                     #log_data = str(msg.lat) + ' ' + str(msg.lon) + ' ' + str(msg.relative_alt) + '\n'
                     #log_file.write(log_data)
         except:
             pass
 
 
+def getSingleRtcmMsg():
+    dropMsg, rtcmFullmsg, rtcmDataFrame = [], [], []
+    msgByteCount, rtcmId, rtcmLength = 0, 0, 0
+    while True:
+        nowByte = gpsSerial.read(1)
+        nowByte = int(nowByte.encode('hex'),16)
+        #print(intByte)
+        if msgByteCount == 0:
+            if nowByte == 211: #0xD3
+                if len(dropMsg) != 0:
+                    #print("[UNKNOWN] : ")
+                    #print(dropMsg)
+                    dropMsg = []
+            else:
+                dropMsg.append(nowByte)
+                continue
+        elif msgByteCount == 1:
+            rtcmLength = (nowByte & 3) << 8
+        elif msgByteCount == 2:
+            rtcmLength += nowByte
+        elif msgByteCount <= 2 + rtcmLength:
+            rtcmDataFrame.append(nowByte)
+
+            
+        #elif (msgByteCount > 2 + rtcmLength) and (msgByteCount <= (2 + rtcmLength) + 2):
+            #crc two bytes
+        elif msgByteCount == (2 + rtcmLength) + 3:
+            rtcmFullmsg.append(nowByte) #crc last byte
+            rtcmId = rtcmFullmsg[3]
+            rtcmId = rtcmId << 4
+            rtcmId = rtcmId | ((rtcmFullmsg[4] >> 4) or 15)
+            return [rtcmFullmsg, rtcmDataFrame, rtcmId]
+        msgByteCount += 1
+        rtcmFullmsg.append(nowByte)
+
+
 def read_data():
-    #file_name = raw_input("input file: ")
-    file_name = "port.txt"
-    with open(file_name, "r") as file:
+    #file_name = raw_input('input file: ')
+    file_name = 'port.txt'
+    with open(file_name, 'r') as file:
         input_data = file.read().split('\n')
     #input_data.pop()  #remove last data
     return input_data
@@ -299,30 +373,41 @@ def make_connection(input_data):
         port_num = input_datum[0]
         start_sequence = input_datum[1]
         # drones_set is list of drone-tuple(vehicle, port, sequence)
-        drone = mavutil.mavlink_connection("udp:0.0.0.0:" + str(port_num))
+        drone = mavutil.mavlink_connection('udp:0.0.0.0:' + str(port_num))
         sleep(0.005)
         ack = drone.recv_match(type='HEARTBEAT', blocking=True, timeout=1)
         print(ack)
         if ack is None:
-            print("fail : " + str(int(port_num)-22000))
-            failed_data.append(str(port_num) + " " + str(start_sequence))
+            print('fail : ' + str(int(port_num)-22000))
+            failed_data.append(str(port_num) + ' ' + str(start_sequence))
         else:
-            print("Heartbeat from drone (System %u)" % drone.target_system)
+            print('Heartbeat from drone (System %u)' % drone.target_system)
             var_drones_set.append((drone, start_sequence))
             threading.Thread(target=read_message, args=(drone,)).start()
     if len(failed_data) is not 0:
-        check_retry = raw_input("retry the failure things? (y/n) ")
+        check_retry = raw_input('retry the failure things? (y/n) ')
         print(check_retry)
-        if check_retry is "y":
+        if check_retry == 'y':
             make_connection(failed_data)
-        elif check_retry is "n":
+        elif check_retry == 'n':
             return
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     global mission_cnt
     var_drones_set = list()
     input_data = read_data()
+    '''+ raw_input("input : COM")'''
+    gpsSerial = serial.Serial("COM21" , 115200, timeout=None)
     make_connection(input_data)
     commander_thread = threading.Thread(target=commander, args=[var_drones_set])
     commander_thread.start()
+    rtcmExplain = {1005 : "Stationary RTK reference station ARP", 1074 : "GPS MSM4", 1077 : "GPS MSM7", 1084 : "GLONASS MSM4", 1087 : "GLONASS MSM7",  1094 : "Galileo MSM4",  1097 : "Galileo MSM7",  1124 : "BeiDou MSM4",  1127 : "BeiDou MSM7", 1230 : "GLONASS code-phase biases", 4072 : "Reference station PVT (u-blox proprietary RTCM Message)"}
+    while True:
+        rtcmMsg = getSingleRtcmMsg()
+        rtcmex = rtcmExplain[rtcmMsg[2]] if rtcmMsg[2] in rtcmExplain else str(rtcmMsg[2])
+        for drone in var_drones_set:
+            print("I am in the loop")
+            upload_rtcm(drone, rtcmMsg)
+
+        #print("[RTCM] (", rtcmex , ") : ", rtcmMsg[0])
