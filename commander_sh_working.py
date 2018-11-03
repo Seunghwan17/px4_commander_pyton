@@ -25,6 +25,10 @@ class CommandThread(threading.Thread):
             takeoff(self.drone)
         elif self.command == 'land':
             land(self.drone)
+        elif self.command == 'ready':
+            ready(self.drone)
+        elif self.command == 'status':
+            status(self.drone)
         elif self.command == 'start':
             start(self.drone)
         elif self.command == 'next':
@@ -160,6 +164,21 @@ def land(drone):
     this_drone.mav.set_mode_send(this_drone.target_system, 157, 100925440)
 
 
+def ready(drone):
+    this_drone = drone[0]
+    for iter_range in range(1,5):
+        this_drone.mav.set_mode_send(
+                    this_drone.target_system,
+                    29,
+                    67371008)
+        sleep(0.001)
+
+
+def status(drone):
+    this_drone = drone[0]
+    print(this_drone.flightmode)
+
+
 def start(drone):
     this_drone = drone[0]
     for iter_range in range(1, 5):
@@ -181,6 +200,7 @@ def next_mission(drone):
             this_drone.target_system,  # target_system
             this_drone.target_component,
             next_seq)  # seq
+        sleep(0.01)            
 
 
 def continue_mission(drone):
