@@ -284,10 +284,12 @@ def upload_mission(drone):
 
 def upload_rtcm(drone, rtcm_data):
     this_drone = drone[0]
+    print(this_drone.target_system)    
     full_rtcm_msg = rtcm_data[0]
+    print(len(full_rtcm_msg))
     msg_max_length = 180
     #print("len :" + str(len(full_rtcm_msg)))
-    if(len(full_rtcm_msg) < msg_max_length):
+    if(len(full_rtcm_msg) <= msg_max_length):
         while len(full_rtcm_msg) < 180:
             full_rtcm_msg.append(0)
         rtcm_msg_flag = (this_drone.mav.seq & 0x1F) << 3 
@@ -297,7 +299,8 @@ def upload_rtcm(drone, rtcm_data):
             rtcm_msg_len,   #len
             full_rtcm_msg    #data_t[180]
         )
-        #print("send success")
+        print(str(this_drone.target_system) + '`s ' + str(rtcm_data[2]) + " send success")
+    '''
     else:
         fragment_id = 0
         start = 0
@@ -315,7 +318,7 @@ def upload_rtcm(drone, rtcm_data):
             #full_rtcm_msg[start:]    #data_t[180]
             )
             start += length
-        
+    '''
 
 
 
@@ -426,7 +429,7 @@ if __name__ == '__main__':
     input_data = read_data()
     '''+ raw_input("input : COM")'''
     #com_port = "COM" + str(raw_input("input : COM"))
-    com_port = "COM21"
+    com_port = "COM17"
     gpsSerial = serial.Serial(com_port, 115200, timeout=None)
     make_connection(input_data)
     commander_thread = threading.Thread(target=commander, args=[var_drones_set])
@@ -435,9 +438,11 @@ if __name__ == '__main__':
     while True:
         rtcmMsg = getSingleRtcmMsg()
         rtcmex = rtcmExplain[rtcmMsg[2]] if rtcmMsg[2] in rtcmExplain else str(rtcmMsg[2])
-        if rtcmMsg[2] == 1074 or rtcmMsg[2] == 1084:
+        if rtcmMsg[2] == 1084 or rtcmMsg[2] == 1074 or rtcmMsg[2] == 1005:
             #print("[RTCM] (", rtcmex , ") : ", rtcmMsg[0])
+            #print(var_drones_set)
             for drone in var_drones_set:
+                print(drone)
                 #print(rtcmex)
                 upload_rtcm(drone, rtcmMsg)
         else:
