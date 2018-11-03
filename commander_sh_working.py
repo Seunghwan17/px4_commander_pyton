@@ -277,7 +277,7 @@ def upload_rtcm(drone, rtcm_data):
             rtcm_msg_len,   #len
             full_rtcm_msg    #data_t[180]
         )
-        print("send success")
+        #print("send success")
     else:
         fragment_id = 0
         start = 0
@@ -303,11 +303,11 @@ def upload_rtcm(drone, rtcm_data):
 
 # read a message
 def read_message(drone):
-    file_name = 'GPS_LOG_id_' + str(drone.target_system) + '_' + str(datetime.now()) + '.txt'
+    #file_name = 'GPS_LOG_id_' + str(drone.target_system) + '_' + str(datetime.now()) + '.txt'
     while True:
         msg = drone.recv_match(
             type=['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_REQUEST_INT', 'MISSION_REQUEST',
-                  'MISSION_ACK', 'GLOBAL_POSITION_INT'], blocking=True, timeout=0.5)
+                  'MISSION_ACK', 'GLOBAL_POSITION_INT', 'STATUSTEXT'], blocking=True, timeout=0.5)
         try:
             if msg.name is 'MISSION_ACK' and msg.type is 0:
                 print(str(drone.target_system) + '` upload done')
@@ -316,6 +316,8 @@ def read_message(drone):
             elif msg.name is 'MISSION_REQUEST':
                 #print(msg)
                 mission_cnt = msg.seq
+            elif msg.name is 'STATUSTEXT ':
+                print('id: ' + str(drone.target_system) + msg.text)
             # GPS_LOG
             #if msg.name is 'GLOBAL_POSITION_INT':            
                 #with open(file_name, 'a') as log_file:
