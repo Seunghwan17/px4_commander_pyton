@@ -1,5 +1,5 @@
 from __future__ import print_function
-from time import *
+from time import sleep
 from pymavlink import mavutil
 import threading
 from datetime import datetime
@@ -405,7 +405,6 @@ if __name__ == '__main__':
     var_drones_set = list()
     input_data = read_data()
     '''+ raw_input("input : COM")'''
-
     #com_port = "COM" + str(raw_input("input : COM"))
     com_port = "COM21"
     gpsSerial = serial.Serial(com_port, 115200, timeout=None)
