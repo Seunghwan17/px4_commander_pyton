@@ -176,7 +176,7 @@ def ready(drone):
 
 def status(drone):
     this_drone = drone[0]
-    print(this_drone.flightmode)
+    print(str(this_drone.target_system) + '` ' + str(this_drone.flightmode))
 
 
 def start(drone):
@@ -340,7 +340,7 @@ def read_message(drone):
                 #print(msg)
                 mission_cnt = msg.seq
             elif msg.name is 'STATUSTEXT ':
-                print('id: ' + str(drone.target_system) + msg.text)
+                print('id: ' + str(drone.target_system) + str(msg.text))
             # GPS_LOG
             #if msg.name is 'GLOBAL_POSITION_INT':            
                 #with open(file_name, 'a') as log_file:
@@ -427,15 +427,16 @@ if __name__ == '__main__':
     global mission_cnt
     var_drones_set = list()
     input_data = read_data()
-    '''+ raw_input("input : COM")'''
-    #com_port = "COM" + str(raw_input("input : COM"))
-    com_port = "COM17"
-    gpsSerial = serial.Serial(com_port, 115200, timeout=None)
+    use_rtcm = raw_input('use_rtcm ? (y/n)')
+    if use_rtcm == 'y':
+        com_port = "COM" + str(raw_input("input : COM"))
+        #com_port = "COM17"
+        gpsSerial = serial.Serial(com_port, 115200, timeout=None)
     make_connection(input_data)
     commander_thread = threading.Thread(target=commander, args=[var_drones_set])
     commander_thread.start()
     rtcmExplain = {1005 : "Stationary RTK reference station ARP", 1074 : "GPS MSM4", 1077 : "GPS MSM7", 1084 : "GLONASS MSM4", 1087 : "GLONASS MSM7",  1094 : "Galileo MSM4",  1097 : "Galileo MSM7",  1124 : "BeiDou MSM4",  1127 : "BeiDou MSM7", 1230 : "GLONASS code-phase biases", 4072 : "Reference station PVT (u-blox proprietary RTCM Message)"}
-    while True:
+    while True and use_rtcm == 'y':
         rtcmMsg = getSingleRtcmMsg()
         rtcmex = rtcmExplain[rtcmMsg[2]] if rtcmMsg[2] in rtcmExplain else str(rtcmMsg[2])
         if rtcmMsg[2] == 1084 or rtcmMsg[2] == 1074 or rtcmMsg[2] == 1005:
