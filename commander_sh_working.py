@@ -81,6 +81,8 @@ def command_to_drone(command, drones_set):
     else:
         if target_command == 'thread':
             for drone in drones_set:
+<<<<<<< HEAD
+=======
                 print('target : ' + str(drone[0].target_system))
                 if drone_id_command == str(drone[0].target_system):
                     command_thread = CommandThread(drone, target_command)
@@ -88,11 +90,22 @@ def command_to_drone(command, drones_set):
                     sleep(0.001)
         else:
             for drone in drones_set:
+>>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
                 print('target : ' + str(drone[0].target_system))
                 if drone_id_command == str(drone[0].target_system):
                     command_thread = CommandThread(drone, target_command)
                     command_thread.start()
                     sleep(0.001)
+<<<<<<< HEAD
+        else:
+            for drone in drones_set:
+                print('target : ' + str(drone[0].target_system))
+                if drone_id_command == str(drone[0].target_system):
+                    command_thread = CommandThread(drone, target_command)
+                    command_thread.start()
+                    sleep(0.001)
+=======
+>>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
                     command_thread.join()
 
 
@@ -134,6 +147,7 @@ def test_function(drone):
             (position_fish_new.lat - shark_lat) / dist,
             (position_fish_new.lon - shark_lon) / dist
         ]
+<<<<<<< HEAD
         #print("dist : " + str(dist))
         if (dist < 10 ):
 
@@ -171,6 +185,41 @@ def test_function(drone):
                     float('nan'))  # param7
                 sleep(0.001)
 
+=======
+        print("dist : " + str(dist))
+        if (dist < 8 ):
+
+            if(this_drone_lon < position_shark.lon):
+                moving_distance = - 5 * 100
+            else:
+                moving_distance = 5 * 100
+            this_drone.mav.command_long_send(
+                this_drone.target_system,  # target_system
+                this_drone.target_component,
+                mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
+                0,  # confirmation
+                0,  # param1 (0 to indicate disarm)
+                1,  # param2 (all other params meaningless)
+                0,  # param3
+                0,  # param4
+                this_drone_lat,  # param5
+                this_drone_lon + moving_distance,  # param6
+                float('nan'))  # param7
+        else:
+            this_drone.mav.command_long_send(
+                this_drone.target_system,  # target_system
+                this_drone.target_component,
+                mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
+                0,  # confirmation
+                0,  # param1 (0 to indicate disarm)
+                1,  # param2 (all other params meaningless)
+                0,  # param3
+                0,  # param4
+                this_drone_lat,  # param5
+                this_drone_lon,  # param6
+                float('nan'))  # param7
+        sleep(0.1)
+>>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
 
 
 def test_function2(drone):
@@ -178,6 +227,7 @@ def test_function2(drone):
     this_drone = drone[0]
     this_drone_lat = this_drone.location().lat * 10000000
     this_drone_lng = this_drone.location().lng * 10000000
+<<<<<<< HEAD
     print(this_drone_lat, this_drone_lng)
     print(this_drone_lat - 1000, this_drone_lng - 1000)
     print(this_drone.location().alt)
@@ -194,6 +244,24 @@ def test_function2(drone):
             this_drone_lat + 0,  # param5
             this_drone_lng + 400,  # param6
             float('nan'))  # param7
+=======
+    this_drone_alt = this_drone.location().alt
+    print(this_drone_lat, this_drone_lng)
+    print(this_drone_lat - 1000, this_drone_lng - 1000)
+    print(this_drone.location().alt)
+    this_drone.mav.command_long_send(
+        this_drone.target_system,  # target_system
+        this_drone.target_component,
+        mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
+        0,  # confirmation
+        0,  # param1 (0 to indicate disarm)
+        1,  # param2 (all other params meaningless)
+        0,  # param3
+        0,  # param4
+        this_drone_lat + 4000,  # param5
+        this_drone_lng - 4000,  # param6
+        this_drone.location().alt+20)  # param7
+>>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
         
 def test_thread(drone):
     while True:
