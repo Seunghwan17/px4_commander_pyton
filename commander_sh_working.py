@@ -5,6 +5,7 @@ import threading
 from datetime import datetime
 import math
 import serial
+from socket import *
 
 
 mission_cnt = 0
@@ -43,6 +44,10 @@ class CommandThread(threading.Thread):
             test_thread(self.drone)
         elif self.command == 'kill':
             kill(self.drone)
+        elif self.command == 'reboot':
+            reboot(self.drone)
+        elif self.command == 'gps_status':
+            gps_status(self.drone)
         else:
             print('arming/ disarming/ takeoff/ land/ start/ next/ continue/ pause/ upload/ kill')
 
@@ -75,14 +80,13 @@ def command_to_drone(command, drones_set):
             command_thread_list.append(command_thread)
         for command_thread in command_thread_list:
             command_thread.start()
+            sleep(0.001)
         for command_thread in command_thread_list:
             command_thread.join()
         print('Start ' + target_command)
     else:
         if target_command == 'thread':
             for drone in drones_set:
-<<<<<<< HEAD
-=======
                 print('target : ' + str(drone[0].target_system))
                 if drone_id_command == str(drone[0].target_system):
                     command_thread = CommandThread(drone, target_command)
@@ -90,71 +94,92 @@ def command_to_drone(command, drones_set):
                     sleep(0.001)
         else:
             for drone in drones_set:
->>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
                 print('target : ' + str(drone[0].target_system))
                 if drone_id_command == str(drone[0].target_system):
                     command_thread = CommandThread(drone, target_command)
                     command_thread.start()
                     sleep(0.001)
-<<<<<<< HEAD
-        else:
-            for drone in drones_set:
-                print('target : ' + str(drone[0].target_system))
-                if drone_id_command == str(drone[0].target_system):
-                    command_thread = CommandThread(drone, target_command)
-                    command_thread.start()
-                    sleep(0.001)
-=======
->>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
                     command_thread.join()
 
 
 def test_function(drone):
     this_drone = drone[0]
-    shrak_drone = var_drones_set[0][0]
-
-    this_drone.mav.command_long_send(
-        0,  # target_system
-        0,
-        mavutil.mavlink.MAV_CMD_GET_HOME_POSITION,  # command
-        0,  # confirmation
-        0,  # param1 (0 to indicate disarm)
-        0,  # param2 (all other params meaningless)
-        0,  # param3
-        0,  # param4
-        0,  # param5
-        0,  # param6
-        0)  # param7
-
-    position_fish = this_drone.recv_match(type='HOME_POSITION', blocking=True, timeout=1)
-    print(position_fish)
-    this_drone_lat = position_fish.latitude
-    this_drone_lon = position_fish.longitude
-    print(this_drone_lat)
-    print(this_drone_lon)
+    print(this_drone)
+    hawk_drone = var_drones_set[0][0]
+    pigeon_home_msg = None
+    pigeon_home_lat = None
+    pigeon_home_lon = None
+    while pigeon_home_msg is None:
+        this_drone.mav.command_long_send(
+            0,  # target_system
+            0,
+            mavutil.mavlink.MAV_CMD_GET_HOME_POSITION,  # command
+            0,  # confirmation
+            0,  # param1 (0 to indicate disarm)
+            0,  # param2 (all other params meaningless)
+            0,  # param3
+            0,  # param4
+            0,  # param5
+            0,  # param6
+            0)  # param7
+        sleep(0.01)
+        try:
+            pigeon_home_msg = this_drone.recv_match(type='HOME_POSITION', blocking=True, timeout=0.01)
+            #print(pigeon_home_msg)
+            pigeon_home_lat = pigeon_home_msg.latitude
+            pigeon_home_lon = pigeon_home_msg.longitude
+        except:
+            #print("doesn't receive message")
+            pass
+        sleep(0.01)
+    # print("home lat : " + str(pigeon_home_lat))
+    # print("home lon : " + str(pigeon_home_lon))
 
 
     while True:
-        position_fish_new = this_drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=0.1)
-        position_shark = shrak_drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=0.1)
-        shark_lat = position_shark.lat
-        shark_lon = position_shark.lon
+        pigeon_now_position_msg = None
+        pigeon_now_lat = None
+        pigeon_now_lon = None
+        while pigeon_now_position_msg is None:
+            try:
+                pigeon_now_position_msg = this_drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=0.01)
+                pigeon_now_lat=pigeon_now_position_msg.lat
+                pigeon_now_lon=pigeon_now_position_msg.lon
+            except:
+                #print("doesn't receive message")
+                pass
+            sleep(0.001)
+        # print("pigeon lat: " + str(pigeon_now_lat))
+        # print("pigeon lon: " + str(pigeon_now_lon))
+        hawk_now_position_msg = None
+        hawk_now_lat = None
+        hawk_now_lon = None
+        while hawk_now_position_msg is None:
+            try:
+                hawk_now_position_msg = hawk_drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=0.01)
+                hawk_now_lat=hawk_now_position_msg.lat
+                hawk_now_lon=hawk_now_position_msg.lon
+            except:
+                #print("doesn't receive message")
+                pass
+            sleep(0.001)    
+        # print("hawk lat: " + str(hawk_now_lat))
+        # print("hawk lon: " + str(hawk_now_lon))    
+        #dist = 10
         dist = math.sqrt(
-                pow(position_fish_new.lat - shark_lat, 2) +
-                pow(position_fish_new.lon - shark_lon, 2)
+                pow(pigeon_now_lat - hawk_now_lat, 2) +
+                pow(pigeon_now_lon - hawk_now_lon, 2)
                 ) / 100
-        relative_vector = [
-            (position_fish_new.lat - shark_lat) / dist,
-            (position_fish_new.lon - shark_lon) / dist
-        ]
-<<<<<<< HEAD
+        # relative_vector = [
+        #     (pigeon_now_lat - hawk_now_lat) / dist,
+        #     (pigeon_now_lon - hawk_now_lon) / dist
+        # ]
         #print("dist : " + str(dist))
         if (dist < 10 ):
-
-            if(position_fish_new.lon  < position_shark.lon):
-                moving_distance = - 15 * 100
+            if(pigeon_now_lon  < hawk_now_lon):
+                moving_distance = -7 * 100
             else:
-                moving_distance = 15 * 100
+                moving_distance =  7 * 100
             for iter_range in range(1, 5):
                 this_drone.mav.command_long_send(
                     this_drone.target_system,  # target_system
@@ -165,9 +190,10 @@ def test_function(drone):
                     1,  # param2 (all other params meaningless)
                     0,  # param3
                     0,  # param4
-                    this_drone_lat,  # param5
-                    this_drone_lon + moving_distance,  # param6
-                    float('nan'))  # param7
+                    pigeon_home_lat,  # param5
+                    pigeon_home_lon + moving_distance,  # param6
+                    float('nan')
+                    ) 
                 sleep(0.001)
         else:
             for iter_range in range(1, 5):
@@ -180,57 +206,31 @@ def test_function(drone):
                     1,  # param2 (all other params meaningless)
                     0,  # param3
                     0,  # param4
-                    this_drone_lat,  # param5
-                    this_drone_lon,  # param6
+                    pigeon_home_lat,  # param5
+                    pigeon_home_lon,  # param6
                     float('nan'))  # param7
                 sleep(0.001)
-
-=======
-        print("dist : " + str(dist))
-        if (dist < 8 ):
-
-            if(this_drone_lon < position_shark.lon):
-                moving_distance = - 5 * 100
-            else:
-                moving_distance = 5 * 100
-            this_drone.mav.command_long_send(
-                this_drone.target_system,  # target_system
-                this_drone.target_component,
-                mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
-                0,  # confirmation
-                0,  # param1 (0 to indicate disarm)
-                1,  # param2 (all other params meaningless)
-                0,  # param3
-                0,  # param4
-                this_drone_lat,  # param5
-                this_drone_lon + moving_distance,  # param6
-                float('nan'))  # param7
-        else:
-            this_drone.mav.command_long_send(
-                this_drone.target_system,  # target_system
-                this_drone.target_component,
-                mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
-                0,  # confirmation
-                0,  # param1 (0 to indicate disarm)
-                1,  # param2 (all other params meaningless)
-                0,  # param3
-                0,  # param4
-                this_drone_lat,  # param5
-                this_drone_lon,  # param6
-                float('nan'))  # param7
-        sleep(0.1)
->>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
-
+                
 
 def test_function2(drone):
 #this functions is original of reposition
     this_drone = drone[0]
-    this_drone_lat = this_drone.location().lat * 10000000
-    this_drone_lng = this_drone.location().lng * 10000000
-<<<<<<< HEAD
-    print(this_drone_lat, this_drone_lng)
-    print(this_drone_lat - 1000, this_drone_lng - 1000)
-    print(this_drone.location().alt)
+    position_pigeon = None
+    this_drone_lat = None
+    this_drone_lon = None
+    while position_pigeon is None:
+        try:
+            position_pigeon = this_drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=0.01)
+            this_drone_lat = position_pigeon.lat
+            this_drone_lon = position_pigeon.lon
+        except:
+            print("doesn't receive message")
+            pass
+        sleep(0.001)
+    
+    this_drone_lat = position_pigeon.lat
+    this_drone_lon = position_pigeon.lon
+    
     for iter_range in range(1, 5):
         this_drone.mav.command_long_send(
             this_drone.target_system,  # target_system
@@ -241,33 +241,17 @@ def test_function2(drone):
             1,  # param2 (all other params meaningless)
             0,  # param3
             0,  # param4
-            this_drone_lat + 0,  # param5
-            this_drone_lng + 400,  # param6
+            position_pigeon.lat - 400,  # param5
+            position_pigeon.lon ,  # param6
             float('nan'))  # param7
-=======
-    this_drone_alt = this_drone.location().alt
-    print(this_drone_lat, this_drone_lng)
-    print(this_drone_lat - 1000, this_drone_lng - 1000)
-    print(this_drone.location().alt)
-    this_drone.mav.command_long_send(
-        this_drone.target_system,  # target_system
-        this_drone.target_component,
-        mavutil.mavlink.MAV_CMD_DO_REPOSITION,  # command
-        0,  # confirmation
-        0,  # param1 (0 to indicate disarm)
-        1,  # param2 (all other params meaningless)
-        0,  # param3
-        0,  # param4
-        this_drone_lat + 4000,  # param5
-        this_drone_lng - 4000,  # param6
-        this_drone.location().alt+20)  # param7
->>>>>>> 7812fb67214378b1b1220ffc8128fc7f42024339
-        
+        sleep(0.001)
+
+
+
 def test_thread(drone):
     while True:
         command_thread = CommandThread(drone, 'test')
         command_thread.start()
-        sleep(0.1)
         command_thread.join()
 
 
@@ -294,57 +278,58 @@ def arming(drone):
 
 def disarming(drone):
     this_drone = drone[0]
-    this_drone.mav.command_long_send(
-        this_drone.target_system,  # target_system
-        this_drone.target_component,
-        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,  # command
-        0,                                             # confirmation
-        0,                                             # param1 (0 to indicate disarm)
-        0,                                             # param2 (all other params meaningless)
-        0,                                             # param3
-        0,                                             # param4
-        0,                                             # param5
-        0,                                             # param6
-        0)                                             # param7
-
+    for iter_range in range(1, 5):
+        this_drone.mav.command_long_send(
+            this_drone.target_system,  # target_system
+            this_drone.target_component,
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,  # command
+            0,                                             # confirmation
+            0,                                             # param1 (0 to indicate disarm)
+            0,                                             # param2 (all other params meaningless)
+            0,                                             # param3
+            0,                                             # param4
+            0,                                             # param5
+            0,                                             # param6
+            0)                                             # param7
+        sleep(0.001)
 
 def takeoff(drone):
     this_drone = drone[0]
-    this_drone.mav.set_mode_send(
-                this_drone.target_system,
-                29,
-                50593792)
-    sleep(0.01)
-    this_drone.mav.command_long_send(
-        this_drone.target_system,  # target_system
-        this_drone.target_component,
-        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, # command
-        0,                                   # confirmation
-        -1,                                  # param1
-        0,                                   # param2 (all other params meaningless)
-        0,                                   # param3
-        0,                                   # param4
-        float('nan'), # param5
-        float('nan'), # param6
-        5)   # param7
-    sleep(0.01)
-    this_drone.mav.command_long_send(
-        this_drone.target_system,  # target_system
-        this_drone.target_component,
-        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,  # command
-        0,                                             # confirmation
-        1,                                             # param1 (0 to indicate disarm)
-        0,                                             # param2 (all other params meaningless)
-        0,                                             # param3
-        0,                                             # param4
-        0,                                             # param5
-        0,                                             # param6
-        0)                                             # param7
-
+    for iter_range in range(1, 5):
+        this_drone.flightmode = "TAKEOFF"
+        sleep(0.001)
+        this_drone.mav.command_long_send(
+            this_drone.target_system,  # target_system
+            this_drone.target_component,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, # command
+            0,                                   # confirmation
+            -1,                                  # param1
+            0,                                   # param2 (all other params meaningless)
+            0,                                   # param3
+            0,                                   # param4
+            float('nan'), # param5
+            float('nan'), # param6
+            5)   # param7
+        sleep(0.001)
+        this_drone.mav.command_long_send(
+            this_drone.target_system,  # target_system
+            this_drone.target_component,
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,  # command
+            0,                                             # confirmation
+            1,                                             # param1 (0 to indicate disarm)
+            0,                                             # param2 (all other params meaningless)
+            0,                                             # param3
+            0,                                             # param4
+            0,                                             # param5
+            0,                                             # param6
+            0)                                             # param7
+        sleep(0.001)
 
 def land(drone):
     this_drone = drone[0]
-    this_drone.mav.set_mode_send(this_drone.target_system, 157, 100925440)
+    for iter_range in range(1, 5):
+        this_drone.mav.set_mode_send(this_drone.target_system, 157, 100925440)
+        sleep(0.001)
 
 
 def start(drone):
@@ -355,9 +340,10 @@ def start(drone):
         this_drone.mav.set_mode_send(
                     this_drone.target_system,
                     29,
-                    67371008)'''
+                    67371008)
+        '''
         this_drone.set_mode_auto()
-        sleep(0.01)
+        sleep(0.001)
 
 
 def next_mission(drone):
@@ -368,6 +354,7 @@ def next_mission(drone):
             this_drone.target_system,  # target_system
             this_drone.target_component,
             next_seq)  # seq
+        sleep(0.01)
 
 
 def continue_mission(drone):
@@ -377,7 +364,7 @@ def continue_mission(drone):
                     this_drone.target_system,
                     29,
                     67371008)
-        sleep(0.01)
+        sleep(0.001)
 
 
 def pause_mission(drone):
@@ -387,7 +374,7 @@ def pause_mission(drone):
                     this_drone.target_system,
                     29,
                     50593792)
-        sleep(0.01)
+        sleep(0.001)
 
 
 def kill(drone):
@@ -405,6 +392,39 @@ def kill(drone):
         0,                                             # param6
         0)                                             # param7
     print('***************** warning ' + str(this_drone.target_system) + ' is killed, be careful. ********************')
+
+
+def reboot(drone):
+    this_drone = drone[0]
+    print("reboot")
+    for iter_range in range(1, 5):
+        this_drone.mav.command_long_send(
+            this_drone.target_system,  # target_system
+            this_drone.target_component,
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN,  # command
+            0,                                             # confirmation
+            1,                                             # param1 (0 to indicate disarm)
+            0,                                             # param2 (all other params meaningless)
+            0,                                             # param3
+            0,                                             # param4
+            0,                                             # param5
+            0,                                             # param6
+            0)                                             # param7
+    sleep(0.001)
+
+
+def gps_status(drone):
+    this_drone = drone[0]
+    try:
+        gps_msg = this_drone.recv_match(type='GPS_RAW_INT', blocking=True)
+        fix_state = gps_msg.fix_type
+        altitude  = gps_msg.alt
+    except:
+        print("error")
+        return
+
+    print("fix_type : " + str(fix_state))
+    print("altitude : " + str(altitude))
 
 
 def upload_mission(drone):
@@ -492,8 +512,12 @@ def upload_rtcm(drone, rtcm_data):
 def read_message(drone):
     #file_name = 'GPS_LOG_id_' + str(drone.target_system) + '_' + str(datetime.now()) + '.txt'
     while True:
-        msg = drone.recv_match(
-            blocking=True, timeout=0.1)
+        # msg = drone.recv_match(
+        #     type=['HEARTBEAT'],
+        #     blocking=True,
+        #     timeout=0.001)
+        drone.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS,mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                0,0,0)
         '''
         msg = drone.recv_match(
             type=['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_REQUEST_INT', 'MISSION_REQUEST',
@@ -507,15 +531,17 @@ def read_message(drone):
             elif msg.name is 'MISSION_REQUEST':
                 #print(msg)
                 mission_cnt = msg.seq
-            elif msg.name is 'STATUSTEXT ':
-		print('is it worked?')
-                print('id: ' + str(drone.target_system) + msg.text)
+            if msg.get_type() is 'HOME_POSITION':
+                print(msg)
+            else:
+                #print(msg.name)
+                pass
             # GPS_LOG
             #if msg.name is 'GLOBAL_POSITION_INT':            
                 #with open(file_name, 'a') as log_file:
                     #log_data = str(msg.lat) + ' ' + str(msg.lon) + ' ' + str(msg.relative_alt) + '\n'
                     #log_file.write(log_data)
-            print(msg)
+            
         except:
             pass
 
@@ -572,7 +598,7 @@ def make_connection(input_data):
         port_num = input_datum[0]
         start_sequence = input_datum[1]
         # drones_set is list of drone-tuple(vehicle, port, sequence)
-        drone = mavutil.mavlink_connection('udp:0.0.0.0:' + str(port_num))
+        drone = mavutil.mavlink_connection('udp:0.0.0.0:' + str(port_num), force_connected=True)
         sleep(0.005)
         ack = drone.recv_match(type='HEARTBEAT', blocking=True, timeout=1)
         print(ack)
@@ -582,7 +608,7 @@ def make_connection(input_data):
         else:
             print('Heartbeat from drone (System %u)' % drone.target_system)
             var_drones_set.append((drone, start_sequence))
-            #threading.Thread(target=read_message, args=(drone,)).start()
+            threading.Thread(target=read_message, args=(drone,)).start()
     if len(failed_data) is not 0:
         check_retry = raw_input('retry the failure things? (y/n) ')
         print(check_retry)
@@ -592,9 +618,31 @@ def make_connection(input_data):
             return
 
 
+def coummunicator(drones_set):
+    while True:
+        csock = socket(AF_INET, SOCK STREAM)
+        HOST = '127.0.0.1'
+        PORT = 4000
+        BUFSIZE = 7
+        csock.connect((HOST,PORT))
+        print("connect is success")
+        
+        command = csock.recv(BUFSIZE, MSG_WAITALL)
+        data = command.decode("UTF-8")
+        print("type : {}, data len : {}, data : {}, contents : {}".format(type(command),len(command), command, data))
+        to_server = int(12345)
+        right_method = to_server.to_bytes(4, byteorder = 'little')
+        print("Send Data : {}, bytes len : {}, bytes : {}".format(to_server, len(right_method),right_method)
+        sent = csock.send(right_method)
+        sleep(5)
+
+
+
+
+
 if __name__ == '__main__':
-    mission_cnt = 0
-    global mission_cnt
+    #mission_cnt = 0
+    #global mission_cnt
     var_drones_set = list()
     input_data = read_data()
     rtk_use = raw_input('rtk use? (y/n)')
